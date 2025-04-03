@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mic Stream</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 10vh;
+    }
+
+    #mic-button {
+      font-size: 2em;
+      padding: 1em 2em;
+      border: none;
+      border-radius: 1em;
+      cursor: pointer;
+      background-color: red;
+      color: white;
+    }
+
+    #mic-button.connected {
+      background-color: green;
+    }
+  </style>
+</head>
+<body>
+  <h2>Tap to Speak</h2>
+  <button id="mic-button" onclick="toggleMic()">Start Mic</button>
+
+  <script>
+    let isSpeaker = false;
+    let socket = null;
+    let stream = null;
+    let audioContext = null;
+    let processor = null;
+
+    async function toggleMic() {
+      const button = document.getElementById("mic-button");
+
+      if (isSpeaker) {
+        console.log("Stopping mic...");
+        socket?.close();
+        processor?.disconnect();
+        stream?.getTracks().forEach(track => track.stop());
+        audioContext?.close();
+
+        isSpeaker = false;
+        button.classList.remove("connected");
+        button.textContent = "Start Mic";
+        return;
+      }
+
+      console.log("Connecting to mic...");
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        processor = audioContext.createScriptProcessor(256, 1, 1);
+
+        socket = new WebSocket("wss://mic.local/ws");
+        socket.binaryType = "arraybuffer";
+
+        socket.onopen = () => {
+          socket.send("request");
+        };
+
+        socket.onmessage = (event) => {
+          if (event.data === "granted") {
+            isSpeaker = true;
+            button.classList.add("connected");
+            button.textContent = "Mic Connected";
+            console.log("WebSocket open");
+
+            socket.send(JSON.stringify({
+              type: "config",
+              sampleRate: audioContext.sampleRate,
+              rate: audioContext.sampleRate
+            }));
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = (e) => {
+              const input = e.inputBuffer.getChannelData(0);
+              const buffer = new Int16Array(input.length);
+              for (let i = 0; i < input.length; i++) {
+                buffer[i] = input[i] * 0x7FFF;
+              }
+              if (isSpeaker && socket?.readyState === WebSocket.OPEN) {
+                socket.send(buffer);
+              }
+            };
+          } else {
+            console.log("Mic already in use. Closing connection.");
+            socket.close();
+            stream.getTracks().forEach(track => track.stop());
+            audioContext.close();
+          }
+        };
+
+        socket.onclose = () => {
+          console.log("WebSocket closed");
+          isSpeaker = false;
+          button.classList.remove("connected");
+          button.textContent = "Start Mic";
+        };
+      } catch (e) {
+        console.error("Failed to get microphone:", e);
+        button.classList.remove("connected");
+        button.textContent = "Mic Failed";
+      }
+    }
+  </script>
+</body>
+</html>

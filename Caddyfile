@@ -1,0 +1,9 @@
+https://mic.local:443 {
+	root * /home/buddia/Microphone
+	file_server
+	tls internal
+	@ws {
+		path /ws*
+	}
+	reverse_proxy @ws localhost:2000
+}
