@@ -38,6 +38,13 @@ clients = set()
 
 async def handle_client(websocket):
     global current_speaker, audio_buffer
+
+    # Reject connection if one is already connected
+    if len(clients) >= 1:
+        await websocket.close(reason="Server only allows one client at a time")
+        print("Rejected additional client")
+        return
+
     clients.add(websocket)
     client_sample_rate = RATE  # default fallback
 
