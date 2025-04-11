@@ -3,30 +3,35 @@
 <head>
   <title>Mic Stream</title>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      margin-top: 10vh;
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
     }
 
-    #mic-button {
-      font-size: 2em;
-      padding: 1em 2em;
-      border: none;
-      border-radius: 1em;
-      cursor: pointer;
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: sans-serif;
+      font-size: 2.5em;
+      font-weight: bold;
+      text-align: center;
       background-color: red;
       color: white;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
     }
 
-    #mic-button.connected {
+    body.connected {
       background-color: green;
     }
   </style>
 </head>
-<body>
-  <h2>Tap to Speak</h2>
-  <button id="mic-button" onclick="toggleMic()">Start Mic</button>
+<body onclick="toggleMic()">
+  <div id="mic-status">START MIC</div>
 
   <script>
     let isSpeaker = false;
@@ -36,7 +41,8 @@
     let processor = null;
 
     async function toggleMic() {
-      const button = document.getElementById("mic-button");
+      const body = document.body;
+      const status = document.getElementById("mic-status");
 
       if (isSpeaker) {
         console.log("Stopping mic...");
@@ -46,8 +52,8 @@
         audioContext?.close();
 
         isSpeaker = false;
-        button.classList.remove("connected");
-        button.textContent = "Start Mic";
+        body.classList.remove("connected");
+        status.textContent = "START MIC";
         return;
       }
 
@@ -69,8 +75,8 @@
         socket.onmessage = (event) => {
           if (event.data === "granted") {
             isSpeaker = true;
-            button.classList.add("connected");
-            button.textContent = "Mic Connected";
+            body.classList.add("connected");
+            status.textContent = "MIC ON";
             console.log("WebSocket open");
 
             socket.send(JSON.stringify({
@@ -103,13 +109,13 @@
         socket.onclose = () => {
           console.log("WebSocket closed");
           isSpeaker = false;
-          button.classList.remove("connected");
-          button.textContent = "Start Mic";
+          body.classList.remove("connected");
+          status.textContent = "START MIC";
         };
       } catch (e) {
         console.error("Failed to get microphone:", e);
-        button.classList.remove("connected");
-        button.textContent = "Mic Failed";
+        body.classList.remove("connected");
+        status.textContent = "MIC FAILED";
       }
     }
   </script>
