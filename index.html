@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Mic Stream</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="red" id="theme-color">
   <style>
     html, body {
       margin: 0;
@@ -40,6 +42,10 @@
     let audioContext = null;
     let processor = null;
 
+    function setThemeColor(color) {
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", color);
+    }
+
     async function toggleMic() {
       const body = document.body;
       const status = document.getElementById("mic-status");
@@ -54,6 +60,7 @@
         isSpeaker = false;
         body.classList.remove("connected");
         status.textContent = "START MIC";
+        setThemeColor("red");
         return;
       }
 
@@ -77,6 +84,7 @@
             isSpeaker = true;
             body.classList.add("connected");
             status.textContent = "MIC ON";
+            setThemeColor("green");
             console.log("WebSocket open");
 
             socket.send(JSON.stringify({
@@ -111,11 +119,13 @@
           isSpeaker = false;
           body.classList.remove("connected");
           status.textContent = "START MIC";
+          setThemeColor("red");
         };
       } catch (e) {
         console.error("Failed to get microphone:", e);
         body.classList.remove("connected");
         status.textContent = "MIC FAILED";
+        setThemeColor("red");
       }
     }
   </script>
