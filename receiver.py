@@ -34,18 +34,20 @@ stream = sd.OutputStream(
 )
 stream.start()
 
-clients = set()
+current_client = None
+client_lock = asyncio.Lock()
 
 async def handle_client(websocket):
-    global current_speaker, audio_buffer
+    global current_speaker, audio_buffer, current_client
 
-    # Reject connection if one is already connected
-    if len(clients) >= 1:
-        await websocket.close(reason="Server only allows one client at a time")
-        print("Rejected additional client")
-        return
+    # Only allow one client at a time
+    async with client_lock:
+        if current_client is not None:
+            await websocket.close(reason="Only one client allowed at a time")
+            print("Rejected additional client")
+            return
+        current_client = websocket
 
-    clients.add(websocket)
     client_sample_rate = RATE  # default fallback
 
     try:
@@ -77,10 +79,12 @@ async def handle_client(websocket):
     except Exception as e:
         print("Error:", e)
     finally:
-        clients.remove(websocket)
         if websocket == current_speaker:
             current_speaker = None
             print("Speaker disconnected")
+        if websocket == current_client:
+            current_client = None
+            print("Client disconnected")
 
 async def main():
     async with websockets.serve(handle_client, "0.0.0.0", 2000):
