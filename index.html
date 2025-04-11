@@ -43,7 +43,14 @@
     let processor = null;
 
     function setThemeColor(color) {
-      document.querySelector('meta[name="theme-color"]').setAttribute("content", color);
+      let oldMeta = document.querySelector('meta[name="theme-color"]');
+      if (oldMeta) {
+        oldMeta.remove();
+      }
+      const meta = document.createElement('meta');
+      meta.name = "theme-color";
+      meta.content = color;
+      document.head.appendChild(meta);
     }
 
     async function toggleMic() {
