@@ -40,13 +40,12 @@
     let socket = null;
     let stream = null;
     let audioContext = null;
-    let processor = null;
+    let micNode = null;
 
     function setThemeColor(color) {
       let oldMeta = document.querySelector('meta[name="theme-color"]');
-      if (oldMeta) {
-        oldMeta.remove();
-      }
+      if (oldMeta) oldMeta.remove();
+
       const meta = document.createElement('meta');
       meta.name = "theme-color";
       meta.content = color;
@@ -60,7 +59,7 @@
       if (isSpeaker) {
         console.log("Stopping mic...");
         socket?.close();
-        processor?.disconnect();
+        micNode?.disconnect();
         stream?.getTracks().forEach(track => track.stop());
         audioContext?.close();
 
@@ -76,8 +75,10 @@
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioContext = new AudioContext();
+
+        await audioContext.audioWorklet.addModule("processor.js");
         const source = audioContext.createMediaStreamSource(stream);
-        processor = audioContext.createScriptProcessor(256, 1, 1);
+        micNode = new AudioWorkletNode(audioContext, "mic-processor");
 
         socket = new WebSocket("wss://mic.local/ws");
         socket.binaryType = "arraybuffer";
@@ -100,19 +101,13 @@
               rate: audioContext.sampleRate
             }));
 
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-
-            processor.onaudioprocess = (e) => {
-              const input = e.inputBuffer.getChannelData(0);
-              const buffer = new Int16Array(input.length);
-              for (let i = 0; i < input.length; i++) {
-                buffer[i] = input[i] * 0x7FFF;
-              }
+            micNode.port.onmessage = (e) => {
               if (isSpeaker && socket?.readyState === WebSocket.OPEN) {
-                socket.send(buffer);
+                socket.send(e.data);
               }
             };
+
+            source.connect(micNode).connect(audioContext.destination);
           } else if (event.data === "rejected") {
             alert("Mic is already in use. Please try again later.");
             socket.close();
