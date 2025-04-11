@@ -40,9 +40,10 @@ client_lock = asyncio.Lock()
 async def handle_client(websocket):
     global current_speaker, audio_buffer, current_client
 
-    # Only allow one client at a time
+    # Acquire the lock briefly to check and potentially reject
     async with client_lock:
         if current_client is not None:
+            await websocket.send("rejected")
             await websocket.close(reason="Only one client allowed at a time")
             print("Rejected additional client")
             return
@@ -58,6 +59,10 @@ async def handle_client(websocket):
                         current_speaker = websocket
                         await websocket.send("granted")
                         print("Speaker connected")
+                    else:
+                        await websocket.send("rejected")
+                        websocket.close()
+                        return
                 else:
                     try:
                         data = json.loads(message)

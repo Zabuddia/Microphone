@@ -113,8 +113,8 @@
                 socket.send(buffer);
               }
             };
-          } else {
-            console.log("Mic already in use. Closing connection.");
+          } else if (event.data === "rejected") {
+            alert("Mic is already in use. Please try again later.");
             socket.close();
             stream.getTracks().forEach(track => track.stop());
             audioContext.close();
