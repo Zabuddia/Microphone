@@ -1,5 +1,4 @@
 #!/bin/bash
-# Activate virtual environment and run receiver
-
+cd "$(dirname "$0")"
 source mic_venv/bin/activate
 python3 receiver.py
