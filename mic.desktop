@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=mic
+Exec=kgx -- bash -c "/home/buddia/Microphone/run_microphone.sh; exec bash"
+Icon=/home/buddia/Microphone/image.png
+Type=Application
+Terminal=false
